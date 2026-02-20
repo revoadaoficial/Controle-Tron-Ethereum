@@ -10,51 +10,23 @@ body {
   font-family: Arial, sans-serif;
   background: #0b0f1a;
   color: white;
-}
-header {
-  background: linear-gradient(90deg,#0a0f2c,#101a4a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 20px;
-  text-align: center;
-  font-size: 22px;
-  font-weight: bold;
+  min-height: 100vh;
 }
-.container {
-  max-width: 600px;
-  margin: 30px auto;
-  background: #111936;
-  padding: 20px;
-  border-radius: 10px;
-}
-input, button {
-  padding: 12px;
-  margin: 8px 0;
-  border-radius: 6px;
-  border: none;
-}
-input[type="password"], input[type="text"] {
-  width: 100%;
-}
-button {
-  background: #2a5bff;
-  color: white;
-  cursor: pointer;
-}
-button:hover {
-  background: #3b6cff;
-}
-section {
-  margin-top: 20px;
-}
-.status {
-  margin-top: 10px;
-  padding: 10px;
-  background: #20274f;
-  border-radius: 6px;
-  min-height: 40px;
-}
+header { font-size: 28px; font-weight: bold; margin-bottom: 20px; text-align: center; }
+.container { max-width: 400px; width: 100%; background: #111936; padding: 20px; border-radius: 10px; margin-top: 20px; }
+input, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 6px; border: none; }
+button { background: #2a5bff; color: white; cursor: pointer; }
+button:hover { background: #3b6cff; }
+.status { margin-top: 10px; padding: 10px; background: #20274f; border-radius: 6px; min-height: 40px; }
+#accountInfo, #receiveAddress { margin-top: 10px; word-break: break-all; }
 </style>
 </head>
 <body>
+
 <header>PowerMinds Club - Carteira ETH</header>
 
 <div class="container" id="loginContainer">
@@ -88,8 +60,8 @@ import Onboard from 'https://cdn.jsdelivr.net/npm/@web3-onboard/core@2.13.2/dist
 import injectedModule from 'https://cdn.jsdelivr.net/npm/@web3-onboard/injected-wallets@2.13.2/dist/web3-onboard-injected-wallets.esm.js';
 import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.esm.min.js';
 
-// ==== LOGIN SIMPLES ====
-const PASSWORD = "123456"; // sua senha simples
+// ===== LOGIN SIMPLES =====
+const PASSWORD = "123456";
 const loginBtn = document.getElementById('loginBtn');
 const passwordInput = document.getElementById('passwordInput');
 const loginStatus = document.getElementById('loginStatus');
@@ -105,21 +77,15 @@ loginBtn.addEventListener('click', () => {
   }
 });
 
-// ==== CONFIGURAÇÃO WEB3 ====
+// ===== CONFIGURAÇÃO WEB3 =====
 const injected = injectedModule();
 const onboard = Onboard({
   wallets: [injected],
-  chains: [{
-    id: '0x1', token: 'ETH', label: 'Ethereum Mainnet', rpcUrl: 'https://mainnet.infura.io/v3/80633e48116943128cbab25e402764ab'
-  }],
-  appMetadata: {
-    name: 'PowerMinds Club',
-    icon: '<svg></svg>',
-    description: 'Carteira ETH pessoal'
-  }
+  chains: [{ id: '0x1', token: 'ETH', label: 'Ethereum Mainnet', rpcUrl: 'https://mainnet.infura.io/v3/80633e48116943128cbab25e402764ab' }],
+  appMetadata: { name: 'PowerMinds Club', icon: '<svg></svg>', description: 'Carteira ETH pessoal' }
 });
 
-// ==== CONEXÃO DA CARTEIRA ====
+// ===== CONEXÃO DA CARTEIRA =====
 let currentWallet;
 const connectBtn = document.getElementById('connectBtn');
 const accountInfo = document.getElementById('accountInfo');
@@ -134,7 +100,7 @@ connectBtn.addEventListener('click', async () => {
   }
 });
 
-// ==== ENVIAR ETH ====
+// ===== ENVIAR ETH =====
 const sendBtn = document.getElementById('sendBtn');
 const toAddressInput = document.getElementById('toAddress');
 const amountInput = document.getElementById('amountETH');
@@ -142,15 +108,21 @@ const sendStatus = document.getElementById('sendStatus');
 
 sendBtn.addEventListener('click', async () => {
   if(!currentWallet) return alert("Conecte a carteira primeiro!");
-  const provider = new ethers.BrowserProvider(currentWallet.provider);
-  const signer = await provider.getSigner();
-  const tx = await signer.sendTransaction({
-    to: toAddressInput.value,
-    value: ethers.parseEther(amountInput.value)
-  });
-  sendStatus.textContent = `Transação enviada: ${tx.hash}`;
-  await tx.wait();
-  sendStatus.textContent = `Transação confirmada: ${tx.hash}`;
+  const to = toAddressInput.value.trim();
+  const amount = amountInput.value.trim();
+  if(!ethers.isAddress(to)) { sendStatus.textContent = "Endereço inválido!"; return; }
+  if(isNaN(amount) || Number(amount) <= 0) { sendStatus.textContent = "Quantidade inválida!"; return; }
+
+  try {
+    const provider = new ethers.BrowserProvider(currentWallet.provider);
+    const signer = await provider.getSigner();
+    const tx = await signer.sendTransaction({ to, value: ethers.parseEther(amount) });
+    sendStatus.textContent = `Transação enviada: ${tx.hash}`;
+    await tx.wait();
+    sendStatus.textContent = `Transação confirmada: ${tx.hash}`;
+  } catch(err) {
+    sendStatus.textContent = `Erro: ${err.message}`;
+  }
 });
 </script>
 
