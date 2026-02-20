@@ -3,162 +3,156 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>PowerMinds Club</title>
-
+<title>PowerMinds Club - Carteira ETH</title>
 <style>
-
-body{
-margin:0;
-font-family:Arial, Helvetica, sans-serif;
-background:#0b0f1a;
-color:white;
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #0b0f1a;
+  color: white;
 }
-
-header{
-background:linear-gradient(90deg,#0a0f2c,#101a4a);
-padding:20px;
-text-align:center;
-font-size:22px;
-font-weight:bold;
+header {
+  background: linear-gradient(90deg,#0a0f2c,#101a4a);
+  padding: 20px;
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
 }
-
-.hero{
-height:80vh;
-display:flex;
-justify-content:center;
-align-items:center;
-flex-direction:column;
-text-align:center;
-background:radial-gradient(circle at center,#16235a,#020412);
+.container {
+  max-width: 600px;
+  margin: 30px auto;
+  background: #111936;
+  padding: 20px;
+  border-radius: 10px;
 }
-
-.hero h1{
-font-size:40px;
-margin-bottom:10px;
+input, button {
+  padding: 12px;
+  margin: 8px 0;
+  border-radius: 6px;
+  border: none;
 }
-
-.hero p{
-opacity:0.8;
+input[type="password"], input[type="text"] {
+  width: 100%;
 }
-
-.section{
-padding:60px 20px;
-text-align:center;
+button {
+  background: #2a5bff;
+  color: white;
+  cursor: pointer;
 }
-
-.container{
-max-width:700px;
-margin:auto;
+button:hover {
+  background: #3b6cff;
 }
-
-.upload-box{
-background:#111936;
-padding:30px;
-border-radius:10px;
-margin-top:20px;
+section {
+  margin-top: 20px;
 }
-
-input[type="file"]{
-margin-top:15px;
-margin-bottom:15px;
-color:white;
+.status {
+  margin-top: 10px;
+  padding: 10px;
+  background: #20274f;
+  border-radius: 6px;
+  min-height: 40px;
 }
-
-button{
-padding:12px 25px;
-background:#2a5bff;
-border:none;
-color:white;
-border-radius:6px;
-cursor:pointer;
-}
-
-button:hover{
-background:#3b6cff;
-}
-
-footer{
-background:#020412;
-padding:20px;
-text-align:center;
-opacity:0.6;
-margin-top:40px;
-}
-
 </style>
-
 </head>
-
 <body>
+<header>PowerMinds Club - Carteira ETH</header>
 
-<header>
-PowerMinds Club
-</header>
-
-<div class="hero">
-
-<h1>Plataforma Global de Ativos Digitais</h1>
-
-<p>Infraestrutura segura para operações financeiras digitais</p>
-
+<div class="container" id="loginContainer">
+  <h2>Login</h2>
+  <input type="password" id="passwordInput" placeholder="Digite sua senha">
+  <button id="loginBtn">Entrar</button>
+  <div class="status" id="loginStatus"></div>
 </div>
 
-<div class="section">
+<div class="container" id="walletContainer" style="display:none;">
+  <h2>Carteira Ethereum</h2>
+  <button id="connectBtn">Conectar Carteira</button>
+  <div id="accountInfo"></div>
 
-<div class="container">
+  <section>
+    <h3>Enviar ETH</h3>
+    <input type="text" id="toAddress" placeholder="Endereço destino">
+    <input type="text" id="amountETH" placeholder="Quantidade ETH">
+    <button id="sendBtn">Enviar</button>
+    <div class="status" id="sendStatus"></div>
+  </section>
 
-<h2>Sobre a PowerMinds Club</h2>
-
-<p style="line-height:1.6; opacity:0.9;">
-A PowerMinds Club é um fundo investidor especializado em criptomoedas, atuando globalmente desde 2015 com foco em inovação, segurança e gestão estratégica de ativos digitais. Ao longo dos anos, consolidou-se como uma das principais gestoras do setor, operando com infraestrutura institucional e padrões internacionais. Sua atuação abrange mercados globais com tecnologia avançada e processos seguros. A empresa mantém compromisso com eficiência, confidencialidade e crescimento sustentável no ecossistema digital.<br><br>
-Sede internacional: Wall Street, Financial District, New York City, United States.
-</p>
-
+  <section>
+    <h3>Receber ETH</h3>
+    <div id="receiveAddress"></div>
+  </section>
 </div>
 
-</div>
+<script type="module">
+import Onboard from 'https://cdn.jsdelivr.net/npm/@web3-onboard/core@2.13.2/dist/web3-onboard.esm.js';
+import injectedModule from 'https://cdn.jsdelivr.net/npm/@web3-onboard/injected-wallets@2.13.2/dist/web3-onboard-injected-wallets.esm.js';
+import { ethers } from 'https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.esm.min.js';
 
-<div class="section">
+// ==== LOGIN SIMPLES ====
+const PASSWORD = "123456"; // sua senha simples
+const loginBtn = document.getElementById('loginBtn');
+const passwordInput = document.getElementById('passwordInput');
+const loginStatus = document.getElementById('loginStatus');
+const loginContainer = document.getElementById('loginContainer');
+const walletContainer = document.getElementById('walletContainer');
 
-<div class="container">
+loginBtn.addEventListener('click', () => {
+  if(passwordInput.value === PASSWORD){
+    loginContainer.style.display = 'none';
+    walletContainer.style.display = 'block';
+  } else {
+    loginStatus.textContent = "Senha incorreta!";
+  }
+});
 
-<h2>Envio de Comprovante de Depósito</h2>
+// ==== CONFIGURAÇÃO WEB3 ====
+const injected = injectedModule();
+const onboard = Onboard({
+  wallets: [injected],
+  chains: [{
+    id: '0x1', token: 'ETH', label: 'Ethereum Mainnet', rpcUrl: 'https://mainnet.infura.io/v3/80633e48116943128cbab25e402764ab'
+  }],
+  appMetadata: {
+    name: 'PowerMinds Club',
+    icon: '<svg></svg>',
+    description: 'Carteira ETH pessoal'
+  }
+});
 
-<div class="upload-box">
+// ==== CONEXÃO DA CARTEIRA ====
+let currentWallet;
+const connectBtn = document.getElementById('connectBtn');
+const accountInfo = document.getElementById('accountInfo');
+const receiveAddress = document.getElementById('receiveAddress');
 
-<p>
-Para confirmação do depósito, envie o comprovante da transferência abaixo.
-</p>
+connectBtn.addEventListener('click', async () => {
+  const wallets = await onboard.connectWallet();
+  if(wallets.length > 0){
+    currentWallet = wallets[0];
+    accountInfo.innerHTML = `Endereço: ${currentWallet.accounts[0].address}`;
+    receiveAddress.textContent = currentWallet.accounts[0].address;
+  }
+});
 
-<form>
+// ==== ENVIAR ETH ====
+const sendBtn = document.getElementById('sendBtn');
+const toAddressInput = document.getElementById('toAddress');
+const amountInput = document.getElementById('amountETH');
+const sendStatus = document.getElementById('sendStatus');
 
-<input type="file" name="comprovante" required>
-
-<br>
-
-<button type="submit">
-Enviar Comprovante
-</button>
-
-</form>
-
-<p style="opacity:0.6; margin-top:15px; font-size:14px;">
-Formatos aceitos: PDF, JPG ou PNG.
-</p>
-
-</div>
-
-</div>
-
-</div>
-
-<footer>
-
-© 2026 powerminds.club  
-Todos os direitos reservados
-
-</footer>
+sendBtn.addEventListener('click', async () => {
+  if(!currentWallet) return alert("Conecte a carteira primeiro!");
+  const provider = new ethers.BrowserProvider(currentWallet.provider);
+  const signer = await provider.getSigner();
+  const tx = await signer.sendTransaction({
+    to: toAddressInput.value,
+    value: ethers.parseEther(amountInput.value)
+  });
+  sendStatus.textContent = `Transação enviada: ${tx.hash}`;
+  await tx.wait();
+  sendStatus.textContent = `Transação confirmada: ${tx.hash}`;
+});
+</script>
 
 </body>
 </html>
