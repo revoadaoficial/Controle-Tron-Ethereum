@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>PowerMinds Club - Ethereum Wallet</title>
+<title>PowerMinds Club Wallet</title>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
 
@@ -30,14 +30,13 @@ margin-top:20px;
 
 button{
 width:100%;
-padding:14px;
+padding:15px;
 margin-top:10px;
 border:none;
 border-radius:8px;
 background:#2a5bff;
 color:white;
 font-size:16px;
-font-weight:bold;
 cursor:pointer;
 }
 
@@ -51,13 +50,12 @@ padding:12px;
 margin-top:10px;
 border-radius:8px;
 border:none;
-font-size:16px;
 }
 
 .status{
 margin-top:10px;
 background:#20274f;
-padding:12px;
+padding:10px;
 border-radius:8px;
 word-break:break-all;
 }
@@ -72,122 +70,81 @@ word-break:break-all;
 
 <div class="container">
 
-<button onclick="connectWallet()">Conectar Carteira</button>
+<button id="connectBtn">Conectar Carteira</button>
 
-<div class="status" id="network">Rede: Ethereum Mainnet</div>
-
-<div class="status" id="connected">Carteira conectada: -</div>
+<div class="status" id="address">Endereço: -</div>
 
 <div class="status" id="balance">Saldo: -</div>
 
-<div class="status">
-Carteira de envio padrão:<br>
-0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689
-</div>
-
-<div class="status">
-Carteira de autorização:<br>
-0xc06d73162E9BffbCfBF1DA59C511002A8F9155E5
-</div>
-
 <h3>Enviar ETH</h3>
 
-<input id="to" value="0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689">
+<input id="to" placeholder="Endereço destino">
 
 <input id="amount" placeholder="Quantidade ETH">
 
-<button onclick="sendETH()">Enviar</button>
+<button id="sendBtn">Enviar ETH</button>
 
-<div class="status" id="txStatus"></div>
-
-<h3>Receber ETH</h3>
-
-<div class="status" id="receive">Conecte sua carteira</div>
+<div class="status" id="status"></div>
 
 </div>
 
 
 <script>
 
-/* CONFIGURAÇÃO */
-
-const AUTH_WALLET="0xc06d73162E9BffbCfBF1DA59C511002A8F9155E5";
-
-const SEND_WALLET="0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689";
-
-const ETH_CHAIN_ID="0x1";
-
-
 let provider;
 let signer;
 let userAddress;
 
 
-/* CONECTAR */
+/* BOTÃO CONECTAR */
 
-async function connectWallet(){
+document.getElementById("connectBtn").onclick = async function(){
 
 if(!window.ethereum){
 
-alert("Instale MetaMask");
+alert("MetaMask não instalado");
 
 return;
 
 }
 
-provider=new ethers.BrowserProvider(window.ethereum);
+provider = new ethers.BrowserProvider(window.ethereum);
 
 await provider.send("eth_requestAccounts",[]);
 
-const network=await provider.getNetwork();
+signer = await provider.getSigner();
 
-if(network.chainId!=1n){
+userAddress = await signer.getAddress();
 
-alert("Mude para Ethereum Mainnet");
+document.getElementById("address").innerHTML =
+"Endereço:<br>"+userAddress;
+
+const balance = await provider.getBalance(userAddress);
+
+document.getElementById("balance").innerHTML =
+"Saldo: "+ethers.formatEther(balance)+" ETH";
+
+};
+
+
+
+/* BOTÃO ENVIAR */
+
+document.getElementById("sendBtn").onclick = async function(){
+
+try{
+
+if(!signer){
+
+alert("Conecte a carteira primeiro");
 
 return;
 
 }
 
-signer=await provider.getSigner();
+const to = document.getElementById("to").value.trim();
 
-userAddress=await signer.getAddress();
-
-document.getElementById("connected").innerHTML=
-"Carteira conectada:<br>"+userAddress;
-
-document.getElementById("receive").innerHTML=userAddress;
-
-loadBalance();
-
-}
-
-
-
-/* SALDO */
-
-async function loadBalance(){
-
-const balance=await provider.getBalance(userAddress);
-
-const eth=ethers.formatEther(balance);
-
-document.getElementById("balance").innerHTML=
-"Saldo: "+eth+" ETH";
-
-}
-
-
-
-/* ENVIO */
-
-async function sendETH(){
-
-try{
-
-const to=document.getElementById("to").value;
-
-const amount=document.getElementById("amount").value;
+const amount = document.getElementById("amount").value.trim();
 
 if(!ethers.isAddress(to)){
 
@@ -197,66 +154,32 @@ return;
 
 }
 
-if(amount<=0){
+const tx = await signer.sendTransaction({
 
-alert("Valor inválido");
+to: to,
 
-return;
-
-}
-
-/* AUTORIZAÇÃO */
-
-if(!userAddress){
-
-alert("Conecte carteira primeiro");
-
-return;
-
-}
-
-/* ENVIO TRANSAÇÃO */
-
-const tx=await signer.sendTransaction({
-
-to:to,
-
-value:ethers.parseEther(amount)
+value: ethers.parseEther(amount)
 
 });
 
-document.getElementById("txStatus").innerHTML=
-"Transação enviada:<br>"+tx.hash;
+document.getElementById("status").innerHTML =
+"Aguardando confirmação:<br>"+tx.hash;
 
 await tx.wait();
 
-document.getElementById("txStatus").innerHTML=
-"Confirmada:<br>"+tx.hash;
+document.getElementById("status").innerHTML =
+"Enviado com sucesso:<br>"+tx.hash;
 
-loadBalance();
+}catch(e){
 
-}catch(err){
-
-document.getElementById("txStatus").innerHTML=
-"Erro:<br>"+err.message;
+document.getElementById("status").innerHTML =
+"Erro:<br>"+e.message;
 
 }
 
-}
-
-
-
-/* AUTO UPDATE */
-
-if(window.ethereum){
-
-window.ethereum.on("accountsChanged",connectWallet);
-
-window.ethereum.on("chainChanged",connectWallet);
-
-}
+};
 
 </script>
 
 </body>
-</html>
+</html>>
