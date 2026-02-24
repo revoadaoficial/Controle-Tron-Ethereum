@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>PowerMinds Club - Web3 Wallet</title>
+<title>PowerMinds Club - Ethereum Wallet</title>
 
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
 
@@ -22,7 +23,7 @@ padding:20px;
 background:#111936;
 padding:20px;
 border-radius:12px;
-max-width:400px;
+max-width:420px;
 margin:auto;
 margin-top:20px;
 }
@@ -61,46 +62,61 @@ border-radius:8px;
 word-break:break-all;
 }
 
-h1{
-margin-bottom:10px;
-}
-
 </style>
 
 </head>
 
 <body>
 
-<h1>PowerMinds Club</h1>
+<h2>PowerMinds Club</h2>
 
 <div class="container">
 
 <button onclick="connectWallet()">Conectar Carteira</button>
 
-<div class="status" id="network">Rede: Não conectado</div>
+<div class="status" id="network">Rede: Ethereum Mainnet</div>
 
-<div class="status" id="address">Endereço: -</div>
+<div class="status" id="connected">Carteira conectada: -</div>
 
 <div class="status" id="balance">Saldo: -</div>
 
+<div class="status">
+Carteira de envio padrão:<br>
+0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689
+</div>
+
+<div class="status">
+Carteira de autorização:<br>
+0xc06d73162E9BffbCfBF1DA59C511002A8F9155E5
+</div>
+
 <h3>Enviar ETH</h3>
 
-<input id="to" placeholder="Endereço destino">
+<input id="to" value="0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689">
 
 <input id="amount" placeholder="Quantidade ETH">
 
-<button onclick="sendETH()">Enviar ETH</button>
+<button onclick="sendETH()">Enviar</button>
 
-<div class="status" id="sendStatus"></div>
+<div class="status" id="txStatus"></div>
 
 <h3>Receber ETH</h3>
 
-<div class="status" id="receive">Conecte a carteira</div>
+<div class="status" id="receive">Conecte sua carteira</div>
 
 </div>
 
 
 <script>
+
+/* CONFIGURAÇÃO */
+
+const AUTH_WALLET="0xc06d73162E9BffbCfBF1DA59C511002A8F9155E5";
+
+const SEND_WALLET="0x97b9D2102A9a65A26E1EE82D59e42d1B73B68689";
+
+const ETH_CHAIN_ID="0x1";
+
 
 let provider;
 let signer;
@@ -113,37 +129,39 @@ async function connectWallet(){
 
 if(!window.ethereum){
 
-alert("Instale MetaMask ou Trust Wallet");
+alert("Instale MetaMask");
 
 return;
 
 }
 
-try{
-
 provider=new ethers.BrowserProvider(window.ethereum);
 
 await provider.send("eth_requestAccounts",[]);
+
+const network=await provider.getNetwork();
+
+if(network.chainId!=1n){
+
+alert("Mude para Ethereum Mainnet");
+
+return;
+
+}
 
 signer=await provider.getSigner();
 
 userAddress=await signer.getAddress();
 
-document.getElementById("address").innerHTML="Endereço:<br>"+userAddress;
+document.getElementById("connected").innerHTML=
+"Carteira conectada:<br>"+userAddress;
 
 document.getElementById("receive").innerHTML=userAddress;
 
 loadBalance();
 
-loadNetwork();
-
-}catch(err){
-
-alert(err.message);
-
 }
 
-}
 
 
 /* SALDO */
@@ -154,23 +172,14 @@ const balance=await provider.getBalance(userAddress);
 
 const eth=ethers.formatEther(balance);
 
-document.getElementById("balance").innerHTML="Saldo: "+eth+" ETH";
+document.getElementById("balance").innerHTML=
+"Saldo: "+eth+" ETH";
 
 }
 
 
-/* REDE */
 
-async function loadNetwork(){
-
-const network=await provider.getNetwork();
-
-document.getElementById("network").innerHTML="Rede: "+network.name;
-
-}
-
-
-/* ENVIAR */
+/* ENVIO */
 
 async function sendETH(){
 
@@ -196,6 +205,18 @@ return;
 
 }
 
+/* AUTORIZAÇÃO */
+
+if(!userAddress){
+
+alert("Conecte carteira primeiro");
+
+return;
+
+}
+
+/* ENVIO TRANSAÇÃO */
+
 const tx=await signer.sendTransaction({
 
 to:to,
@@ -204,24 +225,28 @@ value:ethers.parseEther(amount)
 
 });
 
-document.getElementById("sendStatus").innerHTML="Transação enviada:<br>"+tx.hash;
+document.getElementById("txStatus").innerHTML=
+"Transação enviada:<br>"+tx.hash;
 
 await tx.wait();
 
-document.getElementById("sendStatus").innerHTML="Confirmado:<br>"+tx.hash;
+document.getElementById("txStatus").innerHTML=
+"Confirmada:<br>"+tx.hash;
 
 loadBalance();
 
 }catch(err){
 
-document.getElementById("sendStatus").innerHTML="Erro:<br>"+err.message;
+document.getElementById("txStatus").innerHTML=
+"Erro:<br>"+err.message;
 
 }
 
 }
 
 
-/* AUTO DETECT */
+
+/* AUTO UPDATE */
 
 if(window.ethereum){
 
@@ -230,7 +255,6 @@ window.ethereum.on("accountsChanged",connectWallet);
 window.ethereum.on("chainChanged",connectWallet);
 
 }
-
 
 </script>
 
