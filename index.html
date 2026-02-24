@@ -1,185 +1,170 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>PowerMinds Club Wallet</title>
-
-<script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
-
-<style>
-
-body{
-background:#0b0f1a;
-color:white;
-font-family:Arial;
-text-align:center;
-padding:20px;
-}
-
-.container{
-background:#111936;
-padding:20px;
-border-radius:12px;
-max-width:420px;
-margin:auto;
-margin-top:20px;
-}
-
-button{
-width:100%;
-padding:15px;
-margin-top:10px;
-border:none;
-border-radius:8px;
-background:#2a5bff;
-color:white;
-font-size:16px;
-cursor:pointer;
-}
-
-button:hover{
-background:#3b6cff;
-}
-
-input{
-width:100%;
-padding:12px;
-margin-top:10px;
-border-radius:8px;
-border:none;
-}
-
-.status{
-margin-top:10px;
-background:#20274f;
-padding:10px;
-border-radius:8px;
-word-break:break-all;
-}
-
-</style>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PowerMinds Club Wallet</title>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.8.1/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
+  <style>
+    body {
+      background: #0b0f1a;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+    .container {
+      background: #111936;
+      padding: 20px;
+      border-radius: 12px;
+      max-width: 420px;
+      margin: auto;
+      margin-top: 20px;
+    }
+    button {
+      width: 100%;
+      padding: 15px;
+      margin-top: 10px;
+      border: none;
+      border-radius: 8px;
+      background: #2a5bff;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #3b6cff;
+    }
+    input {
+      width: 100%;
+      padding: 12px;
+      margin-top: 10px;
+      border-radius: 8px;
+      border: none;
+    }
+    .status {
+      margin-top: 10px;
+      background: #20274f;
+      padding: 10px;
+      border-radius: 8px;
+      word-break: break-all;
+    }
+  </style>
 </head>
-
 <body>
+  <h2>PowerMinds Club</h2>
+  <div class="container">
+    <button id="connectBtn">Conectar Carteira</button>
+    <div class="status" id="address">Endereço: -</div>
+    <div class="status" id="balance">Saldo: -</div>
+    <h3>Enviar ETH</h3>
+    <input id="to" placeholder="Endereço destino">
+    <input id="amount" placeholder="Quantidade ETH">
+    <button id="sendBtn">Enviar ETH</button>
+    <div class="status" id="status"></div>
+  </div>
 
-<h2>PowerMinds Club</h2>
+  <script>
+    let walletConnector;
+    let provider;
+    let signer;
+    let userAddress;
+    let walletConnected = false;
 
-<div class="container">
+    document.getElementById('connectBtn').addEventListener('click', async () => {
+      if (!walletConnector) {
+        walletConnector = new WalletConnect({
+          bridge: "https://bridge.walletconnect.org"
+        });
+      }
 
-<button id="connectBtn">Conectar Carteira</button>
+      if (!walletConnector.connected) {
+        try {
+          await walletConnector.createSession();
+          alert("Escaneie o QR code na sua carteira (ex: Trust Wallet, MetaMask Mobile).");
+        } catch (error) {
+          console.error("Erro ao iniciar WalletConnect:", error);
+          alert("Falha na conexão. Verifique o console.");
+        }
+      } else {
+        // Caso já esteja conectado, pegamos os detalhes
+        walletConnected = true;
+        const { accounts, chainId } = walletConnector;
+        userAddress = accounts[0];
+        provider = new ethers.providers.Web3Provider(walletConnector);
+        signer = provider.getSigner();
+        document.getElementById('address').innerHTML = "Endereço:<br>" + userAddress;
+        const balance = await provider.getBalance(userAddress);
+        document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
+      }
+    });
 
-<div class="status" id="address">Endereço: -</div>
+    walletConnector.on("connect", async (error, payload) => {
+      if (error) {
+        console.error("Erro ao conectar:", error);
+        alert("Erro na conexão, verifique o console.");
+        return;
+      }
+      walletConnected = true;
+      const { accounts, chainId } = payload.params[0];
+      userAddress = accounts[0];
+      provider = new ethers.providers.Web3Provider(walletConnector);
+      signer = provider.getSigner();
+      document.getElementById('address').innerHTML = "Endereço:<br>" + userAddress;
+      const balance = await provider.getBalance(userAddress);
+      document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
+    });
 
-<div class="status" id="balance">Saldo: -</div>
+    walletConnector.on("disconnect", () => {
+      walletConnected = false;
+      userAddress = null;
+      provider = null;
+      signer = null;
+      document.getElementById('address').innerHTML = "Endereço: -";
+      document.getElementById('balance').innerHTML = "Saldo: -";
+      alert("Desconectado da carteira.");
+    });
 
-<h3>Enviar ETH</h3>
+    document.getElementById('sendBtn').addEventListener('click', async () => {
+      if (!walletConnected || !signer) {
+        alert("Conecte a carteira primeiro.");
+        return;
+      }
+      try {
+        const to = document.getElementById('to').value.trim();
+        const amount = document.getElementById('amount').value.trim();
 
-<input id="to" placeholder="Endereço destino">
+        if (!ethers.utils.isAddress(to)) {
+          alert("Endereço de destino inválido.");
+          return;
+        }
+        if (isNaN(amount) || Number(amount) <= 0) {
+          alert("Quantidade inválida.");
+          return;
+        }
 
-<input id="amount" placeholder="Quantidade ETH">
+        const tx = await signer.sendTransaction({
+          to: to,
+          value: ethers.parseEther(amount)
+        });
 
-<button id="sendBtn">Enviar ETH</button>
+        document.getElementById('status').innerHTML = "Transação enviada:<br>" + tx.hash;
+        console.log("Transação enviada, aguardando confirmação:", tx.hash);
 
-<div class="status" id="status"></div>
+        await tx.wait();
 
-</div>
+        document.getElementById('status').innerHTML = "Transação confirmada:<br>" + tx.hash;
+        console.log("Transação confirmada:", tx.hash);
 
-
-<script>
-
-let provider;
-let signer;
-let userAddress;
-
-
-/* BOTÃO CONECTAR */
-
-document.getElementById("connectBtn").onclick = async function(){
-
-if(!window.ethereum){
-
-alert("MetaMask não instalado");
-
-return;
-
-}
-
-provider = new ethers.BrowserProvider(window.ethereum);
-
-await provider.send("eth_requestAccounts",[]);
-
-signer = await provider.getSigner();
-
-userAddress = await signer.getAddress();
-
-document.getElementById("address").innerHTML =
-"Endereço:<br>"+userAddress;
-
-const balance = await provider.getBalance(userAddress);
-
-document.getElementById("balance").innerHTML =
-"Saldo: "+ethers.formatEther(balance)+" ETH";
-
-};
-
-
-
-/* BOTÃO ENVIAR */
-
-document.getElementById("sendBtn").onclick = async function(){
-
-try{
-
-if(!signer){
-
-alert("Conecte a carteira primeiro");
-
-return;
-
-}
-
-const to = document.getElementById("to").value.trim();
-
-const amount = document.getElementById("amount").value.trim();
-
-if(!ethers.isAddress(to)){
-
-alert("Endereço inválido");
-
-return;
-
-}
-
-const tx = await signer.sendTransaction({
-
-to: to,
-
-value: ethers.parseEther(amount)
-
-});
-
-document.getElementById("status").innerHTML =
-"Aguardando confirmação:<br>"+tx.hash;
-
-await tx.wait();
-
-document.getElementById("status").innerHTML =
-"Enviado com sucesso:<br>"+tx.hash;
-
-}catch(e){
-
-document.getElementById("status").innerHTML =
-"Erro:<br>"+e.message;
-
-}
-
-};
-
-</script>
-
+        // Atualiza saldo após envio
+        const balance = await provider.getBalance(userAddress);
+        document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
+      } catch (error) {
+        console.error("Erro na transação:", error);
+        document.getElementById('status').innerHTML = "Erro:<br>" + error.message;
+      }
+    });
+  </script>
 </body>
-</html>>
+</html>
