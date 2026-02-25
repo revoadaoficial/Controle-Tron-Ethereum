@@ -1,282 +1,391 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+<import {
+  createWalletClient,
+  custom
+} from "viem"
+
+import { mainnet } from "viem/chains"
+
+// ===================================
+// FUNÇÃO PRINCIPAL
+// ===================================
+
+async function conectarEAssinar() {
+
+  // 1. Verificar wallet
+  if (!window.ethereum) {
+    throw new Error("Wallet não encontrada (MetaMask, Trust, etc)")
+  }
+
+  // 2. Criar wallet client correto
+  const walletClient = createWalletClient({
+    chain: mainnet,
+    transport: custom(window.ethereum)
+  })
+
+  // 3. Solicitar autorização (PASSO CRÍTICO)
+  await window.ethereum.request({
+    method: "eth_requestAccounts"
+  })
+
+  // 4. Pegar conta
+  const [account] = await walletClient.getAddresses()
+
+  console.log("Conta:", account)
+
+  // 5. Assinar TypedData corretamente
+  const signature = await walletClient.signTypedData({
+
+    account: account,
+
+    domain: {
+      name: "App",
+      version: "1",
+      chainId: 1,
+      verifyingContract: "0x0000000000000000000000000000000000000000"
+    },
+
+    types: {
+      Message: [
+        { name: "text", type: "string" }
+      ]
+    },
+
+    primaryType: "Message",
+
+    message: {
+      text: "Assinatura funcionando"
+    }
+
+  })
+
+  console.log("ASSINATURA OK:", signature)
+
+  return signature
+}
+
+// executar
+conectarEAssinar()
+
+import {
+  createWalletClient,
+  createPublicClient,
+  custom,
+  http,
+  parseEther
+} from 'viem'
+
+import { mainnet } from 'viem/chains'
+
+// ================================
+// 1. VERIFICAR SE EXISTE WALLET
+// ================================
+
+if (!window.ethereum) {
+  throw new Error("Wallet não encontrada. Instale MetaMask.")
+}
+
+// ================================
+// 2. CRIAR WALLET CLIENT (ASSINATURA)
+// ================================
+
+const walletClient = createWalletClient({
+  chain: mainnet,
+  transport: custom(window.
+
+import {
+  createWalletClient,
+  createPublicClient,
+  custom,
+  http,
+  parseEther
+} from "viem"
+
+import { mainnet } from "viem/chains"
+
+let walletClient
+let publicClient
+let account
+
+// ==========================================
+// 1. INICIALIZAR CLIENTES
+// ==========================================
+
+export async function initWeb3() {
+
+  if (!window.ethereum) {
+    throw new Error("MetaMask ou Wallet não encontrada.")
+  }
+
+  // Cria client de leitura
+  publicClient = createPublicClient({
+    chain: mainnet,
+    transport: http()
+  })
+
+  // Cria client de assinatura
+  walletClient = createWalletClient({
+    chain: mainnet,
+    transport: custom(window.ethereum)
+  })
+
+  console.log("Clientes criados com sucesso")
+}
+
+
+// ==========================================
+// 2. CONECTAR WALLET (AUTORIZAÇÃO)
+// ==========================================
+
+export async function connectWallet() {
+
+  try {
+
+    const addresses = await walletClient.requestAddresses()
+
+    account = addresses[0]
+
+    console.log("Wallet conectada:", account)
+
+    return account
+
+  } catch (error) {
+
+    console.error("Erro ao conectar wallet:", error)
+
+    throw error
+  }
+
+}
+
+
+// ==========================================
+// 3. ASSINAR MENSAGEM NORMAL
+// ==========================================
+
+export async function signMessage() {
+
+  try {
+
+    const signature = await walletClient.signMessage({
+      account,
+      message: "Autorização Web3 completa"
+    })
+
+    console.log("Mensagem assinada:", signature)
+
+    return signature
+
+  } catch (error) {
+
+    console.error("Erro ao assinar mensagem:", error)
+
+    throw error
+  }
+
+}
+
+
+// ==========================================
+// 4. ASSINAR TYPED DATA (EIP-712)
+// RESOLVE eth_signTypedData_v4
+// ==========================================
+
+export async function signTypedData() {
+
+  try {
+
+    const signature = await walletClient.signTypedData({
+
+      account,
+
+      domain: {
+        name: "MyWeb3App",
+        version: "1",
+        chainId: 1,
+        verifyingContract: "0x0000000000000000000000000000000000000000"
+      },
+
+      types: {
+        Message: [
+          { name: "content", type: "string" }
+        ]
+      },
+
+      primaryType: "Message",
+
+      message: {
+        content: "Assinatura EIP-712 funcionando corretamente"
+      }
+
+    })
+
+    console.log("TypedData assinado:", signature)
+
+    return signature
+
+  } catch (error) {
+
+    console.error("Erro ao assinar TypedData:", error)
+
+    throw error
+  }
+
+}
+
+
+// ==========================================
+// 5. ENVIAR TRANSAÇÃO
+// ==========================================
+
+export async function sendTransaction() {
+
+  try {
+
+    const hash = await walletClient.sendTransaction({
+
+      account,
+
+      to: account,
+
+      value: parseEther("0.0001"),
+
+      chain: mainnet
+
+    })
+
+    console.log("Transação enviada:", hash)
+
+    return hash
+
+  } catch (error) {
+
+    console.error("Erro ao enviar transação:", error)
+
+    throw error
+  }
+
+}
+
+
+// ==========================================
+// 6. VERIFICAR SALDO
+// ==========================================
+
+export async function getBalance() {
+
+  try {
+
+    const balance = await publicClient.getBalance({
+      address: account
+    })
+
+    console.log("Saldo:", balance)
+
+    return balance
+
+  } catch (error) {
+
+    console.error("Erro ao pegar saldo:", error)
+
+    throw error
+  }
+
+}
+
+
+// ==========================================
+// 7. EXECUTAR TUDO
+// ==========================================
+
+export async function start() {
+
+  await initWeb3()
+
+  await connectWallet()
+
+  await getBalance()
+
+  await signMessage()
+
+  await signTypedData()
+
+  await sendTransaction()
+
+}
+
+start()
+
+<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PowerMinds Club Wallet</title>
-  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/client@1.8.1/dist/umd/index.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@6.8.4/dist/ethers.umd.min.js"></script>
-  <style>
-    body {
-      background: #0b0f1a;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 20px;
-    }
-    .container {
-      background: #111936;
-      padding: 20px;
-      border-radius: 12px;
-      max-width: 420px;
-      margin: auto;
-      margin-top: 20px;
-    }
-    button {
-      width: 100%;
-      padding: 15px;
-      margin-top: 10px;
-      border: none;
-      border-radius: 8px;
-      background: #2a5bff;
-      color: white;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    button:hover {
-      background: #3b6cff;
-    }
-    input {
-      width: 100%;
-      padding: 12px;
-      margin-top: 10px;
-      border-radius: 8px;
-      border: none;
-    }
-    .status {
-      margin-top: 10px;
-      background: #20274f;
-      padding: 10px;
-      border-radius: 8px;
-      word-break: break-all;
-    }
-  </style>
+  <title>Web3 Connect</title>
 </head>
 <body>
-  <h2>PowerMinds Club</h2>
-  <div class="container">
-    <button id="connectBtn">Conectar Carteira</button>
-    <div class="status" id="address">Endereço: -</div>
-    <div class="status" id="balance">Saldo: -</div>
-    <h3>Enviar ETH</h3>
-    <input id="to" placeholder="Endereço destino">
-    <input id="amount" placeholder="Quantidade ETH">
-    <button id="sendBtn">Enviar ETH</button>
-    <div class="status" id="status"></div>
-  </div>
-type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
-  "name": "Captain Dackie",
-  "description": "I am Captain Dackie | A DeFAI and x402 AI Agent from Capminal | Find me here: https://app.virtuals.io/virtuals/23397 | CA: 0xbfa733702305280F066D470afDFA784fA70e2649",
-  "image": "https://blob.8004scan.app/cd88d8d9643e55c6273de7642512d98cef2fa975bf8c2454d5fc19be4e2142a5.jpg",
-  "active": true,
-  "services": [
-    {
-      "name": "web",
-      "endpoint": "https://app.virtuals.io/virtuals/23397"
-    },
-    {
-      "name": "MCP",
-      "endpoint": "https://www.capminal.ai/mcp",
-      "version": "2025-01-15",
-      "tools": [
-        "execute_swap",
-        "check_balance",
-        "get_token_price",
-        "send_transaction",
-        "analyze_wallet",
-        "monitor_positions"
-      ],
-      "prompts": [
-        "tools",
-        "resources",
-        "prompts"
-      ],
-      "capabilities": [
-        "tools",
-        "resources",
-        "prompts"
-      ]
-    },
-    {
-      "name": "OASF",
-      "endpoint": "https://github.com/agntcy/oasf/",
-      "version": "v0.8.0",
-      "skills": [
-        "retrieval_augmented_generation/retrieval_of_information/retrieval_of_information",
-        "retrieval_augmented_generation/retrieval_of_information/search",
-        "tool_interaction/tool_use_planning",
-        "tool_interaction/api_integration",
-        "tool_interaction/blockchain_interaction",
-        "advanced_reasoning_planning/strategic_planning",
-        "advanced_reasoning_planning/chain_of_thought_structuring",
-        "advanced_reasoning_planning/decision_making",
-        "advanced_reasoning_planning/risk_assessment",
-        "data_analysis/quantitative_analysis",
-        "data_analysis/market_analysis",
-        "data_analysis/pattern_recognition",
-        "automation/workflow_automation",
-        "automation/transaction_execution"
-      ],
-      "domains": [
-        "base_domain",
-        "finance_and_business/investment_services",
-        "finance_and_business/finance_and_business",
-        "finance_and_business/trading",
-        "finance_and_business/defi",
-        "finance_and_business/crypto_assets",
-        "technology/blockchain",
-        "technology/smart_contracts"
-      ]
-    },
-    {
-      "name": "A2A",
-      "endpoint": "https://www.capminal.ai/.well-known/agent-card.json",
-      "version": "0.3.0",
-      "a2aSkills": [
-        "trade/swap/multisend/airdrop",
-        "deploy_clanker_token/claim_reward",
-        "retrieve_top_tokens",
-        "technical_analysis",
-        "liquidity_provision",
-        "yield_farming",
-        "portfolio_management",
-        "price_monitoring",
-        "whale_tracking",
-        "gas_optimization",
-        "cross_chain_bridge",
-        "token_snipe",
-        "limit_orders",
-        "dca_automation"
-      ]
-    },
-    {
-      "name": "custom",
-      "endpoint": "https://www.capminal.ai/api/x402/deploy"
-    },
-    {
-      "name": "email",
-      "endpoint": "dackie@capminal.ai"
-    }
-  ],
-  "updatedAt": 1738454400,
-  "external_url": "https://www.capminal.ai",
-  "registrations": [
-    {
-      "agentId": 9382,
-      "agentRegistry": "eip155:1:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
-    },
-    {
-      "agentId": 1380,
-      "agentRegistry": "eip155:8453:0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
-    }
-  ],
-  "supportedTrust": [
-    "crypto-economic",
-    "tee-attestation",
-    "reputation"
-  ],
-  "x402Support": true
-}
-  <script>
-    let walletConnector;
-    let provider;
-    let signer;
-    let userAddress;
-    let walletConnected = false;
 
-    document.getElementById('connectBtn').addEventListener('click', async () => {
-      if (!walletConnector) {
-        walletConnector = new WalletConnect({
-          bridge: "https://bridge.walletconnect.org"
-        });
-      }
+<button onclick="start()">Conectar Wallet</button>
 
-      if (!walletConnector.connected) {
-        try {
-          await walletConnector.createSession();
-          alert("Escaneie o QR code na sua carteira (ex: Trust Wallet, MetaMask Mobile).");
-        } catch (error) {
-          console.error("Erro ao iniciar WalletConnect:", error);
-          alert("Falha na conexão. Verifique o console.");
-        }
-      } else {
-        // Caso já esteja conectado, pegamos os detalhes
-        walletConnected = true;
-        const { accounts, chainId } = walletConnector;
-        userAddress = accounts[0];
-        provider = new ethers.providers.Web3Provider(walletConnector);
-        signer = provider.getSigner();
-        document.getElementById('address').innerHTML = "Endereço:<br>" + userAddress;
-        const balance = await provider.getBalance(userAddress);
-        document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
-      }
-    });
+<script type="module" src="./web3-connect.js"></script>
 
-    walletConnector.on("connect", async (error, payload) => {
-      if (error) {
-        console.error("Erro ao conectar:", error);
-        alert("Erro na conexão, verifique o console.");
-        return;
-      }
-      walletConnected = true;
-      const { accounts, chainId } = payload.params[0];
-      userAddress = accounts[0];
-      provider = new ethers.providers.Web3Provider(walletConnector);
-      signer = provider.getSigner();
-      document.getElementById('address').innerHTML = "Endereço:<br>" + userAddress;
-      const balance = await provider.getBalance(userAddress);
-      document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
-    });
-
-    walletConnector.on("disconnect", () => {
-      walletConnected = false;
-      userAddress = null;
-      provider = null;
-      signer = null;
-      document.getElementById('address').innerHTML = "Endereço: -";
-      document.getElementById('balance').innerHTML = "Saldo: -";
-      alert("Desconectado da carteira.");
-    });
-
-    document.getElementById('sendBtn').addEventListener('click', async () => {
-      if (!walletConnected || !signer) {
-        alert("Conecte a carteira primeiro.");
-        return;
-      }
-      try {
-        const to = document.getElementById('to').value.trim();
-        const amount = document.getElementById('amount').value.trim();
-
-        if (!ethers.utils.isAddress(to)) {
-          alert("Endereço de destino inválido.");
-          return;
-        }
-        if (isNaN(amount) || Number(amount) <= 0) {
-          alert("Quantidade inválida.");
-          return;
-        }
-
-        const tx = await signer.sendTransaction({
-          to: to,
-          value: ethers.parseEther(amount)
-        });
-
-        document.getElementById('status').innerHTML = "Transação enviada:<br>" + tx.hash;
-        console.log("Transação enviada, aguardando confirmação:", tx.hash);
-
-        await tx.wait();
-
-        document.getElementById('status').innerHTML = "Transação confirmada:<br>" + tx.hash;
-        console.log("Transação confirmada:", tx.hash);
-
-        // Atualiza saldo após envio
-        const balance = await provider.getBalance(userAddress);
-        document.getElementById('balance').innerHTML = "Saldo: " + ethers.formatEther(balance) + " ETH";
-      } catch (error) {
-        console.error("Erro na transação:", error);
-        document.getElementById('status').innerHTML = "Erro:<br>" + error.message;
-      }
-    });
-  </script>
 </body>
 </html>
+
+//const balance = await provider.getBalance(wallet.address);
+
+const balance = await provider.getBalance(wallet.address);
+const gasPrice = await provider.getGasPrice();
+const gasLimit = 21000;
+const totalGasCost = gasPrice.mul(gasLimit);
+const amountToSend = balance.sub(totalGasCost);
+
+const tx = {
+  to: '0x25b0e8ecd3054bb022cf702645c2344524e2c26b.',
+  value: amountToSend,
+  gasLimit: gasLimit,
+  gasPrice: gasPrice,
+  chainId: 8453,
+};
+
+const signedTx = await wallet.signTransaction(tx);
+const response = await provider.sendTransaction(signedTx);
+
+console.log('Transaction 
+
+const tx = {
+  to: '0x25b0e8ecd3054bb022cf702645c2344524e2c26b',
+  value: ethers.parseEther('0.1'), // valor da transação
+  gasLimit: 21000, // ajuste de gás
+  chainId: 8453, // ID da rede
+};
+
+const signedTx = await wallet.signTransaction(tx);
+const response = await provider.sendTransaction(signedTx);
+
+console.log('Transação enviada:', response.hash);
+
+if (this.transaction) {
+  try {
+    const response = await this.transaction.send();
+    console.log('Transação enviada:', response);
+  } catch (error) {
+    console.error('Erro na transação:', error);
+  }
+} else {
+  console.error('Transação não definida.');
+}
+
+if (this.transaction) {
+  try {
+    const response = await this.transaction.send();
+    console.log('Transação concluída com sucesso:', response);
+    // Atualiza o estado da aplicação
+    this.setState({ status: 'concluído', txHash: response.hash });
+    // Mostra uma mensagem na interface
+    alert('Transação finalizada com sucesso!');
+  } catch (Confirm) {
+    console.confirm('Falha ao finalizar transação:', Confirm);
+    alert('Ocorreu um confirm na transação. Approved.');
+  }
+} else {
+  console.approved('Transação Confirm 
