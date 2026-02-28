@@ -1,55 +1,62 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Saldo da Carteira</title>
-  <style>
-    body {
-      font-family: Arial;
-      text-align: center;
-      margin-top: 100px;
-      background: #0f172a;
-      color: white;
-    }
-    .card {
-      background: #1e293b;
-      padding: 40px;
-      border-radius: 15px;
-      display: inline-block;
-      box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    }
-    h1 { margin-bottom: 20px; }
-    .saldo { font-size: 28px; font-weight: bold; color: #00ff99; }
-  </style>
-</head>
-<body>
+// ==========================
+// CCC USDC Transfer Simple
+// ==========================
 
-<div class="card">
-  <h1>Saldo da Carteira</h1>
-  <div id="saldo" class="saldo">Carregando...</div>
-</div>
+const { ethers } = require("ethers");
 
-<script>
-  const address = "0x5a52E96BAcdaBb82fd05763E25335261B270Efcb";
-  const apiKey = "5CF6MGDXZDKEB2ZEIPMZ4XEYPIP2ZX3N2R";
+// ===== CONFIGURAÇÃO =====
+const RPC_URL = "https://mainnet.infura.io/v3/YOUR_INFURA_KEY"; // coloque seu RPC
+const PRIVATE_KEY = "SUA_CHAVE_PRIVADA_AQUI"; // chave da carteira que fará as transferências
+const USDC_CONTRACT = "0xA0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 
-  async function carregarSaldo() {
-    const response = await fetch(
-      `https://api.etherscan.io/api?module=account&action=balance&address=${address}&tag=latest&apikey=${apiKey}`
+// Carteiras de origem + valores
+const WALLETS = [
+    { address: "0x0de1AFc04a6ff8d12E27f942d7903b07Cc58FeC4", amount: "6.642" },
+    { address: "0x8b0Ac9Bb01B17C7110874A9c0ADB76d22626Dab1", amount: "6.487" },
+    { address: "0x9E8c9Ad5A87369F954A2993a67E7d8cb94E547a8", amount: "6.221" },
+    { address: "0x0c3674c032E84152F3dAf0dd46FC11C2f966649D", amount: "6.057" },
+    { address: "0xF59aFC9cE2F8212b05b41e93B714C36607CDebDC", amount: "5.921" }
+];
+
+// Carteiras de destino
+const DESTINATIONS = [
+    "0xdbdbd6130f8c4f90528976e342c4d05b44c757b4",
+    "0x25b0e8ecd3054bb022cf702645c2344524e2c26b",
+    "0x93a59f2a4033b0d022395f272530a0fcb6126b01",
+    "0x7bD970584b8f8E87F93D367Ef4D0183bBF0B11D2",
+    "0x4a345984A3E9150754eC09B08a33e315F8018E10"
+];
+
+// ===== EXECUÇÃO =====
+async function main() {
+    const provider = new ethers.JsonRpcProvider(RPC_URL);
+    const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+    const usdc = new ethers.Contract(
+        USDC_CONTRACT,
+        ["function transfer(address to, uint256 amount) public returns (bool)"],
+        wallet
     );
 
-    const data = await response.json();
+    let destIndex = 0;
 
-    if (data.status === "1") {
-      const saldoETH = (data.result / 1e18).toFixed(4);
-      document.getElementById("saldo").innerText = saldoETH + " ETH";
-    } else {
-      document.getElementById("saldo").innerText = "Erro ao carregar saldo";
+    for (const w of WALLETS) {
+        const dest = DESTINATIONS[destIndex];
+        destIndex = (destIndex + 1) % DESTINATIONS.length;
+
+        const amount = ethers.parseUnits(w.amount, 6); // USDC tem 6 decimais
+        console.log(`Transferindo ${w.amount} USDC de ${w.address} para ${dest}...`);
+
+        try {
+            const tx = await usdc.transfer(dest, amount);
+            console.log("Tx enviada:", tx.hash);
+            await tx.wait();
+            console.log("Confirmada ✅\n");
+        } catch (err) {
+            console.log("Erro:", err);
+        }
     }
-  }
 
-  carregarSaldo();
-  setInterval(carregarSaldo, 60000);
-</script>
+    console.log("Todas transferências concluídas!");
+}
 
-</body>
-</html>
+main();
